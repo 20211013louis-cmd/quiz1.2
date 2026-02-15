@@ -159,6 +159,80 @@
             border: none;
             font-size: 14px;
         }
+
+        /* 高分題目特效 */
+        @keyframes goldenGlow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 15px rgba(253, 203, 110, 0.6), 0 10px 30px rgba(0, 0, 0, 0.1);
+            }
+
+            50% {
+                box-shadow: 0 0 30px rgba(253, 203, 110, 0.9), 0 0 60px rgba(253, 203, 110, 0.3), 0 10px 30px rgba(0, 0, 0, 0.1);
+            }
+        }
+
+        @keyframes badgeSlide {
+            0% {
+                left: -30%;
+                opacity: 0;
+            }
+
+            15% {
+                opacity: 1;
+            }
+
+            50% {
+                left: 50%;
+            }
+
+            85% {
+                opacity: 1;
+            }
+
+            100% {
+                left: 110%;
+                opacity: 0;
+            }
+        }
+
+        @keyframes pulseIn {
+            0% {
+                transform: scale(0.95);
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .high-value {
+            border: 2px solid #fdcb6e !important;
+            animation: goldenGlow 1.5s ease-in-out infinite;
+        }
+
+        .score-badge {
+            position: absolute;
+            top: -18px;
+            left: -30%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #f39c12, #e17055);
+            color: white;
+            padding: 8px 24px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 22px;
+            z-index: 50;
+            animation: badgeSlide 2.5s ease-in-out forwards;
+            white-space: nowrap;
+        }
+
+        .pulse-in {
+            animation: pulseIn 0.4s ease-out;
+        }
     </style>
 </head>
 
@@ -209,10 +283,11 @@
 
             <div style="margin-top: 25px; text-align: center;">
                 <p style="font-weight: bold; color: #2d3436; margin-bottom: 10px;">📱 掃描 QR Code 加入遊戲</p>
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://20211013louis-cmd.github.io/"
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://20211013louis-cmd.github.io/quiz1.2/"
                     alt="遊戲 QR Code"
                     style="border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 200px; height: 200px;">
-                <p style="font-size: 12px; color: #999; margin-top: 8px;">https://20211013louis-cmd.github.io/</p>
+                <p style="font-size: 12px; color: #999; margin-top: 8px;">https://20211013louis-cmd.github.io/quiz1.2/
+                </p>
             </div>
 
             <div style="margin-top: 20px;">
@@ -253,10 +328,10 @@
 
     <script>
         const defaultQuestions = [
-            { q: "台灣最高的山是哪一座？", a: ["玉山", "雪山", "大霸尖山", "阿里山"], correct: 0 },
-            { q: "HTML 中哪個標籤是用來連結 JavaScript？", a: ["<link>", "<js>", "<script>", "<href>"], correct: 2 },
-            { q: "太陽系中體積最大的行星是？", a: ["地球", "火星", "木星", "土星"], correct: 2 },
-            { q: "遊戲開發中，NPC 代表什麼？", a: ["新玩家角色", "非玩家角色", "主要領袖角色", "核能中心"], correct: 1 }
+            { q: "台灣最高的山是哪一座？", a: ["玉山", "雪山", "大霸尖山", "阿里山"], correct: 0, score: 10 },
+            { q: "HTML 中哪個標籤是用來連結 JavaScript？", a: ["<link>", "<js>", "<script>", "<href>"], correct: 2, score: 10 },
+            { q: "太陽系中體積最大的行星是？", a: ["地球", "火星", "木星", "土星"], correct: 2, score: 10 },
+            { q: "遊戲開發中，NPC 代表什麼？", a: ["新玩家角色", "非玩家角色", "主要領袖角色", "核能中心"], correct: 1, score: 10 }
         ];
 
         // 優先讀取 localStorage 設定，若無則使用預設值
@@ -547,9 +622,26 @@
                 document.getElementById('reveal-btn').classList.remove('hidden');
             }
 
+            // 清除高分特效
+            const gc = document.getElementById('game-container');
+            gc.classList.remove('high-value', 'pulse-in');
+            const oldBadge = document.getElementById('score-badge');
+            if (oldBadge) oldBadge.remove();
+
             const q = questions[currentIdx];
             document.getElementById('question-text').innerText = q.q;
             document.getElementById('current-idx').innerText = currentIdx + 1;
+
+            // 高分題目特效 (score > 10)
+            if ((q.score || 10) > 10) {
+                gc.classList.add('high-value', 'pulse-in');
+                gc.style.position = 'relative';
+                const badge = document.createElement('div');
+                badge.className = 'score-badge';
+                badge.id = 'score-badge';
+                badge.innerText = `⭐ ${q.score} 分題目！`;
+                gc.appendChild(badge);
+            }
 
             // 顯示圖片
             const imgContainer = document.getElementById('img-container');
@@ -662,7 +754,7 @@
             // 顯示結果
             if (playerSelection.index === q.correct) {
                 if (playerSelection.btn) playerSelection.btn.classList.add('correct');
-                score += 10; // 答對得 10 分
+                score += (q.score || 10); // 使用題目設定的分數
                 updateScoreDisplay();
             } else {
                 if (playerSelection.btn) playerSelection.btn.classList.add('wrong');
