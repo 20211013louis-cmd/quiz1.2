@@ -269,12 +269,16 @@
                 </div>
 
                 <div id="join-controls" style="margin-top: 10px;">
-                    <div style="display:flex; gap:5px;">
-                        <input type="text" id="target-peer-id" placeholder="輸入邀請碼"
-                            style="flex:1; padding:10px; border:1px solid #ddd; border-radius:5px;">
-                        <button class="option-btn" onclick="joinGame()"
-                            style="width: auto; margin:0; background: #00b894; color: white;">加入</button>
-                        <button class="option-btn observe-btn" onclick="joinAsObserver()">👁 觀察</button>
+                    <button id="show-join-btn" class="option-btn" onclick="showJoinInput()"
+                        style="width:100%; background:#00b894; color:#fff; border:none;">🔗 加入房間</button>
+                    <div id="join-input-area" class="hidden" style="margin-top:8px;">
+                        <div style="display:flex; gap:5px;">
+                            <input type="text" id="target-peer-id" placeholder="輸入邀請碼"
+                                style="flex:1; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                            <button class="option-btn" onclick="joinGame()"
+                                style="width: auto; margin:0; background: #00b894; color: white;">加入</button>
+                            <button class="option-btn observe-btn" onclick="joinAsObserver()">👁 觀察</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -437,6 +441,17 @@
             let text = `玩家: ${playerCount} 人`;
             if (observerCount > 0) text += ` | 觀察者: ${observerCount} 人`;
             document.getElementById('connection-status').innerText = text;
+        }
+
+        // 顯示加入房間輸入框
+        function showJoinInput() {
+            document.getElementById('show-join-btn').classList.add('hidden');
+            document.getElementById('join-input-area').classList.remove('hidden');
+            // 隱藏開始挑戰按鈕，防止誤觸
+            const startBtn = document.getElementById('start-game-btn');
+            startBtn.classList.add('hidden');
+            startBtn.disabled = true;
+            document.getElementById('target-peer-id').focus();
         }
 
         // Client connects to Host
