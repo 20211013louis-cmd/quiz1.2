@@ -35,22 +35,7 @@
             text-align: center;
         }
 
-        /* 進度條 */
-        #timer-bar-container {
-            width: 100%;
-            height: 10px;
-            background: #eee;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            overflow: hidden;
-        }
 
-        #timer-bar {
-            width: 100%;
-            height: 100%;
-            background: var(--primary);
-            transition: width 0.1s linear;
-        }
 
         .hidden {
             display: none;
@@ -198,6 +183,11 @@
                 <div id="host-controls">
                     <button class="option-btn" onclick="initHost()"
                         style="background:var(--secondary); color:#fff; border:none;">🏠 建立房間 (產生邀請碼)</button>
+                    <label id="host-spectate-label" class="hidden"
+                        style="display:none; align-items:center; gap:6px; margin-top:10px; font-weight:bold; color:#636e72; cursor:pointer;">
+                        <input type="checkbox" id="host-spectate-check"
+                            style="width:18px; height:18px; cursor:pointer;"> 👁 房主觀戰（不參與作答）
+                    </label>
                     <div id="invite-code-display" class="hidden"
                         style="margin-top:10px; padding:10px; background:#e1ffc7; border-radius:5px; font-weight:bold;">
                         邀請碼: <span id="my-peer-id" style="color:#d63031; font-size:1.2em; user-select: all;">...</span>
@@ -234,17 +224,15 @@
             <div id="header-row"
                 style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <div id="question-info" style="font-weight: bold;">第 <span id="current-idx">1</span> 題</div>
-                <div id="time-display" style="color: #e17055; font-weight: bold; font-size: 18px;">⏱ 5.0秒</div>
                 <div id="live-score" style="color: var(--primary); font-weight: bold;">目前分數：0</div>
-            </div>
-            <div id="timer-bar-container">
-                <div id="timer-bar"></div>
             </div>
             <div id="img-container" style="text-align: center; margin: 10px 0; min-height: 0px;"></div>
             <h2 id="question-text">載入中...</h2>
             <div id="options-container"></div>
             <div id="waiting-msg" class="hidden"
                 style="margin-top:10px; color:#e17055; font-weight:bold; animation: blink 1s infinite;">等待對手回答...</div>
+            <button id="reveal-btn" class="next-btn hidden" onclick="hostReveal()"
+                style="left:30px; right:auto; background:#d63031;">✋ 結束作答</button>
             <button id="next-btn" class="next-btn hidden" onclick="nextQuestion()">下一題 ➜</button>
         </div>
 
@@ -304,6 +292,11 @@
                 document.getElementById('join-controls').classList.add('hidden');
                 isHost = true;
                 isMultiplayer = true;
+
+                // 顯示觀戰勾選框
+                const spectateLabel = document.getElementById('host-spectate-label');
+                spectateLabel.classList.remove('hidden');
+                spectateLabel.style.display = 'flex';
 
                 // Host 也要算作一個玩家
                 const myName = document.getElementById('player-name-input').value.trim() || "房主";
@@ -491,6 +484,12 @@
 
         function tryStartGame() {
             if (isMultiplayer && isHost) {
+                // 檢查房主是否選擇觀戰
+                if (document.getElementById('host-spectate-check').checked) {
+                    isObserver = true;
+                    delete players['host']; // 房主不計入玩家
+                    updatePlayerCountUI();
+                }
                 // Broadcast start
                 broadcast({ type: 'START_GAME', questions: questions });
                 startGame();
@@ -504,9 +503,6 @@
 
         let currentIdx = 0;
         let score = 0;
-        let timeLeft = 100;
-        let timerId = null;
-        const TIME_LIMIT = 50; // 5秒 (50 * 0.1s)
 
         function startGame(isRemote = false) {
             if (document.getElementById('start-screen').classList.contains('hidden')) return; // Avoid double start
@@ -542,9 +538,14 @@
             }
 
             // 重置玩家選擇
-            playerSelection = { index: -1, btn: null, timeRemaining: 0 };
+            playerSelection = { index: -1, btn: null };
             document.getElementById('waiting-msg').classList.add('hidden');
             document.getElementById('options-container').classList.remove('disabled-area');
+            document.getElementById('next-btn').classList.add('hidden');
+            // 多人模式房主顯示「結束作答」按鈕
+            if (isMultiplayer && isHost) {
+                document.getElementById('reveal-btn').classList.remove('hidden');
+            }
 
             const q = questions[currentIdx];
             document.getElementById('question-text').innerText = q.q;
@@ -575,28 +576,6 @@
                 btn.onclick = () => selectAnswer(originalIndex, btn);
                 container.appendChild(btn);
             });
-
-            startTimer();
-        }
-
-        function startTimer() {
-            clearInterval(timerId);
-            timeLeft = TIME_LIMIT;
-            document.getElementById('timer-bar').style.width = '100%';
-            updateTimeDisplay();
-            timerId = setInterval(() => {
-                timeLeft -= 1;
-                document.getElementById('timer-bar').style.width = (timeLeft / TIME_LIMIT * 100) + '%';
-                updateTimeDisplay();
-                if (timeLeft <= 0) {
-                    checkAnswer(-1, null); // 時間到
-                }
-            }, 100);
-        }
-
-        function updateTimeDisplay() {
-            const seconds = (timeLeft / 10).toFixed(1);
-            document.getElementById('time-display').innerText = `⏱ ${seconds}秒`;
         }
 
         function updateScoreDisplay() {
@@ -611,7 +590,7 @@
         }
 
         // 儲存玩家選擇
-        let playerSelection = { index: -1, btn: null, timeRemaining: 0 };
+        let playerSelection = { index: -1, btn: null };
 
         function selectAnswer(selectedOriginalIndex, selectedBtn) {
             // 觀察者不能作答
@@ -622,8 +601,7 @@
             // 記錄選擇
             playerSelection = {
                 index: selectedOriginalIndex,
-                btn: selectedBtn,
-                timeRemaining: timeLeft
+                btn: selectedBtn
             };
 
             // 禁用所有按鈕
@@ -657,20 +635,18 @@
         }
 
         function checkAllAnswered() {
+            // 不再自動揭曉，由房主手動按「結束作答」
+        }
+
+        // 房主手動結束作答
+        function hostReveal() {
             if (!isHost) return;
-
-            // Host checks if EVERYONE (including self) is ready
-            const allReady = Object.values(players).every(p => p.ready);
-
-            if (allReady) {
-                // Broadcast Reveal
-                broadcast({ type: 'REVEAL_ANSWER' });
-                revealAnswer();
-            }
+            broadcast({ type: 'REVEAL_ANSWER' });
+            document.getElementById('reveal-btn').classList.add('hidden');
+            revealAnswer();
         }
 
         function revealAnswer() {
-            clearInterval(timerId);
             const q = questions[currentIdx];
             const btns = document.querySelectorAll('.option-btn');
 
@@ -686,7 +662,7 @@
             // 顯示結果
             if (playerSelection.index === q.correct) {
                 if (playerSelection.btn) playerSelection.btn.classList.add('correct');
-                score += Math.ceil(playerSelection.timeRemaining / 10 * 10); // 根據剩餘時間計分
+                score += 10; // 答對得 10 分
                 updateScoreDisplay();
             } else {
                 if (playerSelection.btn) playerSelection.btn.classList.add('wrong');
@@ -699,9 +675,11 @@
             document.getElementById('waiting-msg').classList.add('hidden');
 
             // 顯示「下一題」按鈕（多人模式只有房主可以按）
-            if (isMultiplayer && !isHost) {
-                // 非房主 / 觀察者等待房主按下一題
-                document.getElementById('waiting-msg').innerText = isObserver ? "等待房主進入下一題..." : "等待房主進入下一題...";
+            if (isHost) {
+                document.getElementById('next-btn').classList.remove('hidden');
+            } else if (isMultiplayer) {
+                // 非房主等待房主按下一題
+                document.getElementById('waiting-msg').innerText = "等待房主進入下一題...";
                 document.getElementById('waiting-msg').classList.remove('hidden');
                 document.getElementById('next-btn').classList.add('hidden');
             } else {
@@ -709,14 +687,7 @@
             }
         }
 
-        // 保留 checkAnswer 用於向後相容（時間到時自動呼叫）
-        function checkAnswer(selectedOriginalIndex, selectedBtn) {
-            // 時間到但尚未選擇，視為未作答
-            if (playerSelection.index === -1) {
-                playerSelection = { index: selectedOriginalIndex, btn: selectedBtn, timeRemaining: 0 };
-            }
-            revealAnswer();
-        }
+
 
         function checkSyncNext() {
             if (myReady && oppReady) {
