@@ -122,10 +122,10 @@
 
     <script>
         const defaultQuestions = [
-            { q: "台灣最高的山是哪一座？", a: ["玉山", "雪山", "大霸尖山", "阿里山"], correct: 0 },
-            { q: "HTML 中哪個標籤是用來連結 JavaScript？", a: ["<link>", "<js>", "<script>", "<href>"], correct: 2 },
-            { q: "太陽系中體積最大的行星是？", a: ["地球", "火星", "木星", "土星"], correct: 2 },
-            { q: "遊戲開發中，NPC 代表什麼？", a: ["新玩家角色", "非玩家角色", "主要領袖角色", "核能中心"], correct: 1 }
+            { q: "台灣最高的山是哪一座？", a: ["玉山", "雪山", "大霸尖山", "阿里山"], correct: 0, score: 10 },
+            { q: "HTML 中哪個標籤是用來連結 JavaScript？", a: ["<link>", "<js>", "<script>", "<href>"], correct: 2, score: 10 },
+            { q: "太陽系中體積最大的行星是？", a: ["地球", "火星", "木星", "土星"], correct: 2, score: 10 },
+            { q: "遊戲開發中，NPC 代表什麼？", a: ["新玩家角色", "非玩家角色", "主要領袖角色", "核能中心"], correct: 1, score: 10 }
         ];
 
         let questions = JSON.parse(localStorage.getItem('quiz_questions')) || JSON.parse(JSON.stringify(defaultQuestions));
@@ -151,6 +151,12 @@
                     <div class="row" style="margin-bottom: 10px;">
                         <span style="font-weight:bold; width: 30px;">Q${idx + 1}.</span>
                         <input type="text" value="${q.q}" oninput="updateQuestion(${idx}, this.value)" placeholder="請輸入問題內容..." style="font-weight:bold; font-size: 1.1em;">
+                        <div style="display:flex; align-items:center; gap:2px; flex:none;">
+                            <button onclick="changeScore(${idx}, -10)" style="padding:4px 8px; border-radius:4px; background:#dfe6e9; font-weight:bold; font-size:14px;">－</button>
+                            <span style="width:40px; text-align:center; font-weight:bold; color:var(--primary); font-size:1.1em;">${q.score || 10}</span>
+                            <button onclick="changeScore(${idx}, 10)" style="padding:4px 8px; border-radius:4px; background:#dfe6e9; font-weight:bold; font-size:14px;">＋</button>
+                        </div>
+                        <span style="font-size:0.9em; color:#636e72;">分</span>
                         <button class="del-btn" onclick="delQuestion(${idx})">刪除</button>
                     </div>
                     <div class="row" style="margin-bottom: 20px;">
@@ -180,9 +186,15 @@
         }
         function updateOption(idx, oIdx, val) { questions[idx].a[oIdx] = val; }
         function updateCorrect(idx, oIdx) { questions[idx].correct = oIdx; }
+        function updateScore(idx, val) { questions[idx].score = parseInt(val) || 10; }
+        function changeScore(idx, delta) {
+            const current = questions[idx].score || 10;
+            questions[idx].score = Math.max(10, current + delta);
+            render();
+        }
 
         function addQuestion() {
-            questions.push({ q: "", a: ["", "", "", ""], correct: 0, image: "" });
+            questions.push({ q: "", a: ["", "", "", ""], correct: 0, image: "", score: 10 });
             render();
             // Scroll to bottom
             setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 100);
@@ -213,7 +225,15 @@
             }
         }
 
-        render();
+        // 密碼驗證
+        const ADMIN_PASSWORD = localStorage.getItem('admin_password') || '1234';
+        const inputPwd = prompt('請輸入管理密碼：');
+        if (inputPwd !== ADMIN_PASSWORD) {
+            alert('密碼錯誤！');
+            location.href = 'index.html';
+        } else {
+            render();
+        }
     </script>
 </body>
 
