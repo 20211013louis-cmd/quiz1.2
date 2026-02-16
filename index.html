@@ -233,6 +233,42 @@
         .pulse-in {
             animation: pulseIn 0.4s ease-out;
         }
+
+        /* 答案照片淡入動畫 */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .answer-img-reveal {
+            animation: fadeInUp 0.5s ease-out;
+            margin-top: 15px;
+            padding: 10px;
+            background: linear-gradient(135deg, #e8f8f5, #d5f5e3);
+            border-radius: 12px;
+            border: 2px solid #00b894;
+        }
+
+        .answer-img-reveal img {
+            max-width: 100%;
+            max-height: 250px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 184, 148, 0.2);
+        }
+
+        .answer-img-reveal .answer-img-label {
+            font-weight: bold;
+            color: #00b894;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
     </style>
 </head>
 
@@ -306,6 +342,8 @@
                 <div id="live-score" style="color: var(--primary); font-weight: bold;">目前分數：0</div>
             </div>
             <div id="img-container" style="text-align: center; margin: 10px 0; min-height: 0px;"></div>
+            <div id="hint-img-container" class="hidden" style="text-align: center; margin: 10px 0;"></div>
+            <div id="answer-img-container" class="hidden" style="text-align: center; margin: 10px 0;"></div>
             <h2 id="question-text">載入中...</h2>
             <div id="options-container"></div>
             <div id="waiting-msg" class="hidden"
@@ -332,10 +370,10 @@
 
     <script>
         const defaultQuestions = [
-            { q: "台灣最高的山是哪一座？", a: ["玉山", "雪山", "大霸尖山", "阿里山"], correct: 0, score: 10 },
-            { q: "HTML 中哪個標籤是用來連結 JavaScript？", a: ["<link>", "<js>", "<script>", "<href>"], correct: 2, score: 10 },
-            { q: "太陽系中體積最大的行星是？", a: ["地球", "火星", "木星", "土星"], correct: 2, score: 10 },
-            { q: "遊戲開發中，NPC 代表什麼？", a: ["新玩家角色", "非玩家角色", "主要領袖角色", "核能中心"], correct: 1, score: 10 }
+            { q: "台灣最高的山是哪一座？", a: ["玉山", "雪山", "大霸尖山", "阿里山"], correct: 0, score: 10, hintImage: "", answerImage: "" },
+            { q: "HTML 中哪個標籤是用來連結 JavaScript？", a: ["<link>", "<js>", "<script>", "<href>"], correct: 2, score: 10, hintImage: "", answerImage: "" },
+            { q: "太陽系中體積最大的行星是？", a: ["地球", "火星", "木星", "土星"], correct: 2, score: 10, hintImage: "", answerImage: "" },
+            { q: "遊戲開發中，NPC 代表什麼？", a: ["新玩家角色", "非玩家角色", "主要領袖角色", "核能中心"], correct: 1, score: 10, hintImage: "", answerImage: "" }
         ];
 
         // 優先讀取 localStorage 設定，若無則使用預設值
@@ -658,15 +696,30 @@
                 gc.appendChild(badge);
             }
 
-            // 顯示圖片
+            // 顯示題目圖片
             const imgContainer = document.getElementById('img-container');
             if (q.image && q.image.trim() !== "") {
                 imgContainer.innerHTML = `<img src="${q.image}" style="max-width: 100%; max-height: 250px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">`;
                 imgContainer.classList.remove('hidden');
             } else {
                 imgContainer.innerHTML = '';
-                imgContainer.classList.add('hidden'); // Hide if no image
+                imgContainer.classList.add('hidden');
             }
+
+            // 顯示提示照片
+            const hintImgContainer = document.getElementById('hint-img-container');
+            if (q.hintImage && q.hintImage.trim() !== "") {
+                hintImgContainer.innerHTML = `<div style="font-size:13px; color:#f39c12; font-weight:bold; margin-bottom:5px;">🔍 提示</div><img src="${q.hintImage}" style="max-width: 100%; max-height: 200px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 2px dashed #f39c12;">`;
+                hintImgContainer.classList.remove('hidden');
+            } else {
+                hintImgContainer.innerHTML = '';
+                hintImgContainer.classList.add('hidden');
+            }
+
+            // 隱藏答案照片（等揭曉才顯示）
+            const answerImgContainer = document.getElementById('answer-img-container');
+            answerImgContainer.innerHTML = '';
+            answerImgContainer.classList.add('hidden');
 
             // 準備索引並打亂
             let indices = q.a.map((_, i) => i);
@@ -780,6 +833,13 @@
 
             // 隱藏等待訊息
             document.getElementById('waiting-msg').classList.add('hidden');
+
+            // 顯示答案照片
+            const answerImgContainer = document.getElementById('answer-img-container');
+            if (q.answerImage && q.answerImage.trim() !== "") {
+                answerImgContainer.innerHTML = `<div class="answer-img-reveal"><div class="answer-img-label">✅ 答案照片</div><img src="${q.answerImage}"></div>`;
+                answerImgContainer.classList.remove('hidden');
+            }
 
             // 顯示「下一題」按鈕（多人模式只有房主可以按）
             if (isHost) {

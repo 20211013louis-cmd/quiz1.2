@@ -161,9 +161,19 @@
                     </div>
                     <div class="row" style="margin-bottom: 20px;">
                         <span style="width: 30px;">🖼️</span>
-                        <input type="text" value="${q.image || ''}" oninput="updateImage(${idx}, this.value)" placeholder="圖片網址 (選填，例如 https://example.com/image.jpg)" style="font-size: 0.9em; background: #fafafa;">
+                        <input type="text" value="${q.image || ''}" oninput="updateImage(${idx}, this.value)" placeholder="題目圖片網址 (選填)" style="font-size: 0.9em; background: #fafafa;">
                     </div>
                     ${q.image ? `<div style="text-align:center; margin-bottom:15px;"><img src="${q.image}" style="max-height:150px; border-radius:5px; box-shadow:0 2px 5px rgba(0,0,0,0.1);"></div>` : ''}
+                    <div class="row" style="margin-bottom: 10px;">
+                        <span style="width: 30px;">🔍</span>
+                        <input type="text" value="${q.hintImage || ''}" oninput="updateHintImage(${idx}, this.value)" placeholder="提示照片網址 (選填，出題時顯示)" style="font-size: 0.9em; background: #fffbf0;">
+                    </div>
+                    ${q.hintImage ? `<div style="text-align:center; margin-bottom:15px;"><img src="${q.hintImage}" style="max-height:120px; border-radius:5px; box-shadow:0 2px 5px rgba(0,0,0,0.1); border: 2px dashed #f39c12;"></div>` : ''}
+                    <div class="row" style="margin-bottom: 20px;">
+                        <span style="width: 30px;">✅</span>
+                        <input type="text" value="${q.answerImage || ''}" oninput="updateAnswerImage(${idx}, this.value)" placeholder="答案照片網址 (選填，揭曉答案時顯示)" style="font-size: 0.9em; background: #f0fff4;">
+                    </div>
+                    ${q.answerImage ? `<div style="text-align:center; margin-bottom:15px;"><img src="${q.answerImage}" style="max-height:120px; border-radius:5px; box-shadow:0 2px 5px rgba(0,0,0,0.1); border: 2px dashed #00b894;"></div>` : ''}
                     ${optionsHtml}
                 `;
                 list.appendChild(card);
@@ -181,8 +191,12 @@
         // 使用 debounce 或 onchange 避免輸入時失去焦點。這裡簡單用 DOM 操作優化
         function updateImage(idx, val) {
             questions[idx].image = val;
-            // 嘗試即時更新該卡片的圖片預覽，若無則不動作（等待 render）
-            // 這裡簡單處理：只要數據進去就好，使用者點擊其他地方或存檔時自然會生效
+        }
+        function updateHintImage(idx, val) {
+            questions[idx].hintImage = val;
+        }
+        function updateAnswerImage(idx, val) {
+            questions[idx].answerImage = val;
         }
         function updateOption(idx, oIdx, val) { questions[idx].a[oIdx] = val; }
         function updateCorrect(idx, oIdx) { questions[idx].correct = oIdx; }
@@ -194,7 +208,7 @@
         }
 
         function addQuestion() {
-            questions.push({ q: "", a: ["", "", "", ""], correct: 0, image: "", score: 10 });
+            questions.push({ q: "", a: ["", "", "", ""], correct: 0, image: "", hintImage: "", answerImage: "", score: 10 });
             render();
             // Scroll to bottom
             setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 100);
