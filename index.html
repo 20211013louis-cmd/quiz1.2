@@ -465,18 +465,24 @@
                 if (observers[c.peer]) {
                     delete observers[c.peer];
                 } else {
-                    delete players[c.peer];
-                    // If a player leaves, check if we can proceed
-                    checkAllAnswered();
+                    if (players[c.peer]) {
+                        players[c.peer].disconnected = true;
+                        players[c.peer].ready = true; // 不等待已斷線玩家
+                        const dcName = players[c.peer].name;
+                        broadcast({ type: 'PLAYER_DISCONNECTED', name: dcName });
+                        showToast(`⚠️ ${dcName} 已斷線`);
+                    }
                 }
                 updatePlayerCountUI();
             });
         }
 
         function updatePlayerCountUI() {
-            const playerCount = Object.keys(players).length;
+            const activePlayers = Object.values(players).filter(p => !p.disconnected).length;
+            const dcPlayers = Object.values(players).filter(p => p.disconnected).length;
             const observerCount = Object.keys(observers).length;
-            let text = `玩家: ${playerCount} 人`;
+            let text = `玩家: ${activePlayers} 人`;
+            if (dcPlayers > 0) text += ` (${dcPlayers} 人斷線)`;
             if (observerCount > 0) text += ` | 觀察者: ${observerCount} 人`;
             document.getElementById('connection-status').innerText = text;
         }
@@ -556,6 +562,12 @@
                 document.getElementById('start-game-btn').classList.add('hidden');
                 document.getElementById('host-controls').classList.add('hidden');
             });
+            conn.on('close', () => {
+                showToast('⚠️ 與房主的連線已中斷', true);
+            });
+            conn.on('error', () => {
+                showToast('⚠️ 連線發生錯誤', true);
+            });
         }
 
         function broadcast(data) {
@@ -606,6 +618,8 @@
                 } else if (data.type === 'UPDATE_RANKING') {
                     // Update ranking UI (Optional, if we do live ranking)
                     updateRankingList(data.ranking);
+                } else if (data.type === 'PLAYER_DISCONNECTED') {
+                    showToast(`⚠️ ${data.name} 已斷線`);
                 }
             }
         }
@@ -900,7 +914,8 @@
                     let ranking = Object.values(players).map(p => ({
                         name: p.name,
                         score: p.score,
-                        isHost: p.isHost
+                        isHost: p.isHost,
+                        disconnected: p.disconnected || false
                     }));
 
                     // Sort descending
@@ -929,15 +944,37 @@
                 // Highlight self if possible? For now, just show names
                 // If I am host, I know "房主 (我)"
 
+                const dcTag = p.disconnected ? ' <span style="color:#999;font-size:12px;">(已斷線)</span>' : '';
                 html += `
                     <div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #eee; color:${color}; font-weight:bold;">
-                        <span>${rankIcon} ${p.name}</span>
+                        <span>${rankIcon} ${p.name}${dcTag}</span>
                         <span>${p.score} 分</span>
                     </div>
                 `;
             });
 
             list.innerHTML = html;
+        }
+        // Toast 通知函式
+        function showToast(message, persistent = false) {
+            const toast = document.createElement('div');
+            toast.innerText = message;
+            Object.assign(toast.style, {
+                position: 'fixed', top: '20px', left: '50%',
+                transform: 'translateX(-50%)',
+                background: 'rgba(214, 48, 49, 0.9)', color: 'white',
+                padding: '12px 24px', borderRadius: '10px',
+                fontWeight: 'bold', fontSize: '15px', zIndex: '9999',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                transition: 'opacity 0.5s'
+            });
+            document.body.appendChild(toast);
+            if (!persistent) {
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    setTimeout(() => toast.remove(), 500);
+                }, 3000);
+            }
         }
     </script>
 
